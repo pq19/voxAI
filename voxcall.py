@@ -17,7 +17,8 @@ from shutil import copyfile
 import logging
 import json
 
-#logging.basicConfig(filename='log.txt',filemode='w',level=logger.debug)
+
+#logging.basicConfig(filename='log.txt',filemode='w+',level=logger.debug)
 
 # create logger
 logger = logging.getLogger('')
@@ -28,7 +29,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 
 #create file handler and set level to debug
-fh = logging.FileHandler('log.txt',mode='w')
+fh = logging.FileHandler('log.txt',mode='w+')
 fh.setLevel(logging.DEBUG)
 # create formatter
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -148,12 +149,16 @@ try:
 	OpenMHz_tgid_config = config.get('Section1','openmhz_tgid')
 except:
 	OpenMHz_tgid_config = ''
+try:
+	audio_file_folder_config = config.get('Section1','audio_file_folder')
+except:
+	audio_file_folder_config = './audiosave/'
 
 try:
 	root = Tk()
 	if start_minimized==1:
 		root.iconify()
-	root.title('voxcall')
+	root.title('voxAI')
 except:
 	root = ''
 try:
@@ -426,16 +431,18 @@ def cleanup_audio_files(fname):
 		saveit = saveaudio_config
 	if saveit != 0:
 		try:
-			os.makedirs('./audiosave')
+			os.makedirs(audio_file_folder_config)
 		except OSError as e:
 			if e.errno != errno.EEXIST:
 				raise
 		logger.debug("Moving mp3 file for archiving")
-		copyfile(fname.replace('.wav','.mp3'),'./audiosave/'+fname.replace('.wav','.mp3'))
+		copyfile(fname.replace('.wav','.mp3'),audio_file_folder_config+'/'+fname.replace('.wav','.mp3'))
 	time.sleep(10)  #this is hacky - wait to make sure the upload threads have had time to grab the file before deleting it
 	logger.debug("Removing temporary audio files")
 	os.remove(fname.replace('.wav','.mp3'))
 	os.remove(fname.replace('.wav','.m4a'))
+
+
 
 def start():
 	global rec_debounce_counter
@@ -530,7 +537,7 @@ def start():
 			#data = chararray.tostring(array(data))
 			data = chararray.tobytes(array(data))
 			# write data to WAVE file
-			fname = str(round(time.time())) + "-" + str(BCFY_SlotId.get()) + ".wav"
+			fname = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + "-" + str(BCFY_SlotId.get()) + ".wav"
 			WAVE_OUTPUT_FILENAME = fname
 
 			wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')

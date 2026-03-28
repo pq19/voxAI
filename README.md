@@ -1,3 +1,9 @@
+# 3/28/2026 Paul Qiu 
+- Change naem to voxAI
+- Add configuration for saving folder
+- Change file name from EPOCH to YYYYMMDD-HHMMSS
+
+
 # voxcall
 A sound-activated audio recorder with support for uploading audio to [OpenMHz](https://www.openmhz.com), [Broadcastify Calls](https://www.broadcastify.com/calls/) and [rdio-scanner](https://github.com/chuot/rdio-scanner).  For Windows and Raspberry Pi.
 
