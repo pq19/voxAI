@@ -17,6 +17,7 @@ from shutil import copyfile
 import logging
 import json
 
+import winsound
 
 #logging.basicConfig(filename='log.txt',filemode='w+',level=logger.debug)
 
@@ -443,6 +444,26 @@ def cleanup_audio_files(fname):
 	os.remove(fname.replace('.wav','.m4a'))
 
 
+	
+def play_wav_file(filename):
+	try:
+		if not os.path.isabs(filename):
+			filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+		winsound.PlaySound(filename, winsound.SND_FILENAME | winsound.SND_ASYNC)
+	except:
+		logging.exception('Failed to play wav file')
+
+def play_roger():
+	_thread.start_new_thread(play_wav_file, ('roger.wav',))
+
+def play_who_is_calling():
+	_thread.start_new_thread(play_wav_file, ('whoiscalling.wav',))
+
+def play_done():
+	_thread.start_new_thread(play_wav_file, ('done.wav',))
+
+
+
 
 def start():
 	global rec_debounce_counter
@@ -664,6 +685,12 @@ if root != '':
 	Label(f,text='OpenMHz TG/Channel ID:').grid(row=28,column=0,sticky = E)
 	OpenMHz_tgid_Entry = Entry(f,width=20,validate='key',validatecommand=vcmd,textvariable = OpenMHz_tgid)
 	OpenMHz_tgid_Entry.grid(row = 28, column = 1,sticky=W)
+
+	# play audio 4/5/2026
+	Label(f, text='Quick Audio').grid(row=29, column=0, sticky=E)
+	Button(f, text="Roger", command=play_roger, width=20).grid(row=29, column=1, sticky=W)
+	Button(f, text="Who Is Calling", command=play_who_is_calling, width=20).grid(row=29, column=2, sticky=W)
+	Button(f, text="Done", command=play_done, width=20).grid(row=29, column=3, sticky=W)
 	
 	Button(f, text = "Save & Exit",command = saveconfigdata,width=20).grid(row = 30,column = 1,columnspan = 1,sticky=W)
 	
@@ -671,7 +698,7 @@ if root != '':
 	ttk.Progressbar(f,orient ='vertical',variable = barvar,length = 150).grid(row = 17,rowspan = 8,column = 8,columnspan = 1)
 	Label(f,text='Audio\n Squelch').grid(row=25,column=7)
 	Label(f,text='Audio\n Level').grid(row=25,column=8)
-	
+
 
 if root != '':
 	_thread.start_new_thread(start,())
