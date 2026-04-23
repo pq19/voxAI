@@ -6,7 +6,7 @@ import wave
 import sys
 import os
 import errno
-from numpy import short, array, chararray, frombuffer, log10
+from numpy import short, array, frombuffer, log10
 import traceback
 from tkinter import *
 from tkinter import ttk
@@ -596,13 +596,10 @@ def start():
 			else:
 				data = data
 			duration = len(data)/float(RATE)
-			#convert back to binary to write to WAV later
-			#data = chararray.tostring(array(data))
-			data = chararray.tobytes(array(data))
-			# write data to WAVE file
+			# convert back to binary to write to WAV later
+			data = array(data).tobytes()
 			fname = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + "-" + str(BCFY_SlotId.get()) + ".wav"
 			WAVE_OUTPUT_FILENAME = fname
-
 			wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
 			wf.setnchannels(1)
 			wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
