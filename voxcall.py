@@ -156,6 +156,11 @@ except:
 	audio_file_folder_config = './audiosave/'
 
 try:
+	audio_out_dev_index = config.getint('Section1','audio_out_dev_index')
+except:
+	audio_out_dev_index = 0
+
+try:
 	root = Tk()
 	if start_minimized==1:
 		root.iconify()
@@ -172,17 +177,33 @@ try:
 	#list of the names of the audio input and output devices
 	input_devices = []
 	input_device_indices = {}
+	output_devices = []
+	output_device_indices = {}
 
 	#FIND THE AUDIO DEVICES ON THE SYSTEM
 	info = p.get_host_api_info_by_index(0)
 	numdevices = info.get('deviceCount')
 
-	#find index of pyaudio input and output devices
+	#find index of pyaudio input devices
 	for i in range (0,numdevices):
 		if p.get_device_info_by_host_api_device_index(0,i).get('maxInputChannels')>0:
 			input_devices.append(p.get_device_info_by_host_api_device_index(0,i).get('name'))
 			input_device_indices[p.get_device_info_by_host_api_device_index(0,i).get('name')] = i
 			inv_input_device_indices = dict((v,k) for k,v in input_device_indices.items())
+	#find index of pyaudio output devices
+	for i in range (0,numdevices):
+		if p.get_device_info_by_host_api_device_index(0,i).get('maxOutputChannels')>0:
+			name = p.get_device_info_by_host_api_device_index(0,i).get('name')
+			output_devices.append(name)
+			output_device_indices[name] = i
+			inv_output_device_indices = dict((v,k) for k,v in output_device_indices.items())
+	# get default output device
+	default_output_info = p.get_default_output_device_info()
+	default_output_name = default_output_info['name']
+	# mark default in the list
+	for i in range(len(output_devices)):
+		if output_devices[i] == default_output_name:
+			output_devices[i] = default_output_name + " (Default)"
 	p.terminate()
 except:
 	#exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -229,6 +250,9 @@ if root != '':
 	barvar = IntVar()
 	barvar.set(10)
 	input_device.set(inv_input_device_indices.get(audio_dev_index,input_devices[0]))
+	original_name = inv_output_device_indices.get(audio_out_dev_index, output_devices[0].replace(" (Default)", "") if output_devices else "")
+	display_name = original_name + " (Default)" if original_name == default_output_name else original_name
+	output_device.set(display_name)
 
 RATE = 22050
 chunk = 2205
@@ -449,7 +473,25 @@ def play_wav_file(filename):
 	try:
 		if not os.path.isabs(filename):
 			filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-		winsound.PlaySound(filename, winsound.SND_FILENAME | winsound.SND_ASYNC)
+		wf = wave.open(filename, 'rb')
+		p_out = pyaudio.PyAudio()
+		if root != '':
+			original_name = output_device.get().replace(" (Default)", "")
+			out_index = output_device_indices.get(original_name, 0)
+		else:
+			out_index = audio_out_dev_index
+		stream = p_out.open(format=p_out.get_format_from_width(wf.getsampwidth()),
+							channels=wf.getnchannels(),
+							rate=wf.getframerate(),
+							output=True,
+							output_device_index=out_index)
+		data = wf.readframes(1024)
+		while data:
+			stream.write(data)
+			data = wf.readframes(1024)
+		stream.stop_stream()
+		stream.close()
+		p_out.terminate()
 	except:
 		logging.exception('Failed to play wav file')
 
@@ -602,6 +644,8 @@ def saveconfigdata():
 			config.add_section('Section1')
 		cfgfile = open('config.cfg','w')
 		config.set('Section1','audio_dev_index',str(input_device_indices[input_device.get()]))
+		original_name = output_device.get().replace(" (Default)", "")
+		config.set('Section1','audio_out_dev_index',str(output_device_indices[original_name]))
 		config.set('Section1','record_threshold',str(record_threshold.get()))
 		config.set('Section1','vox_silence_time',str(vox_silence_time))
 		config.set('Section1','in_channel',in_channel.get())
@@ -638,6 +682,9 @@ if root != '':
 	StatLabel.config(fg='blue')
 	Label(f, text="Audio Input Device:").grid(row = 3, column = 0,sticky = E)
 	OptionMenu(f,input_device,*input_devices,command = change_audio_input).grid(row = 3,column = 1,columnspan = 4,sticky = E+W)
+	Label(f, text="Audio Output Device:").grid(row = 4, column = 0,sticky = E)
+	output_menu = OptionMenu(f,output_device,*output_devices)
+	output_menu.grid(row = 4,column = 1,columnspan = 4,sticky = E+W)
 	Label(f,text = 'Audio Input Channel').grid(row = 5,column = 0,sticky=E)
 	audiochannellist = OptionMenu(f,in_channel,"mono","left","right")
 	audiochannellist.config(width=20)
@@ -693,6 +740,15 @@ if root != '':
 	Button(f, text="Done", command=play_done, width=20).grid(row=29, column=3, sticky=W)
 	
 	Button(f, text = "Save & Exit",command = saveconfigdata,width=20).grid(row = 30,column = 1,columnspan = 1,sticky=W)
+	
+	def update_output_color(*args):
+		if "(Default)" in output_device.get():
+			output_menu.config(fg='red')
+		else:
+			output_menu.config(fg='black')
+	
+	output_device.trace_add('write', update_output_color)
+	update_output_color()
 	
 	squelchbar = Scale(f,from_ = 100, to = 0,length = 150,sliderlength = 8,showvalue = 0,variable = record_threshold,orient = 'vertical').grid(row = 17,rowspan=8,column = 7,columnspan = 1)
 	ttk.Progressbar(f,orient ='vertical',variable = barvar,length = 150).grid(row = 17,rowspan = 8,column = 8,columnspan = 1)
