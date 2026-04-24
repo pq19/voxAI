@@ -160,6 +160,23 @@ try:
 except:
 	audio_out_dev_index = 0
 
+# Read Playback_Audio section
+playback_buttons = []
+try:
+	num_playback_audios = config.getint('Playback_Audio', 'num_playback_audios')
+except:
+	num_playback_audios = 3
+for i in range(1, num_playback_audios + 1):
+	try:
+		text = config.get('Playback_Audio', f'button{i}_text')
+	except:
+		text = f'Button {i}'
+	try:
+		file = config.get('Playback_Audio', f'button{i}_file')
+	except:
+		file = f'button{i}.wav'
+	playback_buttons.append((text, file))
+
 try:
 	root = Tk()
 	if start_minimized==1:
@@ -504,6 +521,9 @@ def play_who_is_calling():
 def play_done():
 	_thread.start_new_thread(play_wav_file, ('done.wav',))
 
+def play_audio_file(filename):
+	_thread.start_new_thread(play_wav_file, (filename,))
+
 
 
 
@@ -732,11 +752,18 @@ if root != '':
 
 	# play audio 4/5/2026
 	Label(f, text='Quick Audio').grid(row=29, column=0, sticky=E)
-	Button(f, text="Roger", command=play_roger, width=20).grid(row=29, column=1, sticky=W)
-	Button(f, text="Who Is Calling", command=play_who_is_calling, width=20).grid(row=29, column=2, sticky=W)
-	Button(f, text="Done", command=play_done, width=20).grid(row=29, column=3, sticky=W)
+	row = 29
+	col = 1
+	for text, filename in playback_buttons:
+		Button(f, text=text, command=lambda f=filename: play_audio_file(f), width=20).grid(row=row, column=col, sticky=W)
+		col += 1
+		if col > 3:
+			col = 1
+			row += 1
 	
-	Button(f, text = "Save & Exit",command = saveconfigdata,width=20).grid(row = 30,column = 1,columnspan = 1,sticky=W)
+	# Add space before Save & Exit
+	save_row = row + 2
+	Button(f, text = "Save & Exit",command = saveconfigdata,width=20).grid(row = save_row,column = 1,columnspan = 1,sticky=W)
 	
 	def update_output_color(*args):
 		if "(Default)" in output_device.get():

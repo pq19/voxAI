@@ -3,6 +3,11 @@
 - Add configuration for saving folder
 - Change file name from EPOCH to YYYYMMDD-HHMMSS
 
+# 4/23/2026 Paul Qiu
+- Added configurable playback audio buttons via `config.cfg` under a new `[Playback_Audio]` section
+- Playback buttons now support multiple rows and display up to 3 buttons per row
+- Playback `.wav` files are now stored in the `audio/` subfolder
+- Added GUI spacing so playback buttons and the `Save & Exit` button appear as separate sections
 
 # voxcall
 A sound-activated audio recorder with support for uploading audio to [OpenMHz](https://www.openmhz.com), [Broadcastify Calls](https://www.broadcastify.com/calls/) and [rdio-scanner](https://github.com/chuot/rdio-scanner).  For Windows and Raspberry Pi.
