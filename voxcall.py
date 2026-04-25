@@ -10,6 +10,7 @@ from numpy import short, array, frombuffer, log10
 import traceback
 from tkinter import *
 from tkinter import ttk
+from tkinter import messagebox
 from configparser import ConfigParser
 import _thread
 import urllib3
@@ -83,39 +84,47 @@ config = ConfigParser()
 config.read('config.cfg')
 
 try:
-	audio_dev_index = config.getint('Section1','audio_dev_index')
+	audio_dev_index = config.getint('System','audio_dev_index')
 except:
 	audio_dev_index = 0
 try:
-	record_threshold_config = config.getint('Section1','record_threshold')
+	audio_input_device_name = config.get('System','audio_input_device_name')
+except:
+	audio_input_device_name = ''
+try:
+	audio_output_device_name = config.get('System','audio_output_device_name')
+except:
+	audio_output_device_name = ''
+try:
+	record_threshold_config = config.getint('System','record_threshold')
 except:
 	record_threshold_config = 75
 try:
-	vox_silence_time = config.getfloat('Section1','vox_silence_time')
+	vox_silence_time = config.getfloat('System','vox_silence_time')
 except:
 	vox_silence_time = 3
 try:
-	in_channel_config = config.get('Section1','in_channel')
+	in_channel_config = config.get('System','in_channel')
 except:
 	in_channel_config = 'mono'
 try:
-	BCFY_SystemId_config = config.get('Section1','BCFY_SystemId')
+	BCFY_SystemId_config = config.get('System','BCFY_SystemId')
 except:
 	BCFY_SystemId_config = ''
 try:
-	BCFY_SlotId_config = config.get('Section1','BCFY_SlotId')
+	BCFY_SlotId_config = config.get('System','BCFY_SlotId')
 except:
 	BCFY_SlotId_config = '1'
 try:
-	RadioFreq_config = config.get('Section1','RadioFreq')
+	RadioFreq_config = config.get('System','RadioFreq')
 except:
 	RadioFreq_config = ''
 try:
-	BCFY_APIkey_config = config.get('Section1','BCFY_APIkey')
+	BCFY_APIkey_config = config.get('System','BCFY_APIkey')
 except:
 	BCFY_APIkey_config = ''
 try:
-	saveaudio_config = config.getint('Section1','saveaudio')
+	saveaudio_config = config.getint('System','saveaudio')
 except:
 	saveaudio_config = 0
 try:
@@ -123,42 +132,37 @@ try:
 except:
 	vox_silence_time = 2
 try:
-	RDIO_APIkey_config = config.get('Section1','RDIO_APIkey')
+	RDIO_APIkey_config = config.get('System','RDIO_APIkey')
 except:
 	RDIO_APIkey_config = ''
 try:
-	RDIO_APIurl_config = config.get('Section1','RDIO_APIurl')
+	RDIO_APIurl_config = config.get('System','RDIO_APIurl')
 except:
 	RDIO_APIurl_config = ''
 try:
-	RDIO_system_config = config.get('Section1','RDIO_system')
+	RDIO_system_config = config.get('System','RDIO_system')
 except:
 	RDIO_system_config = ''
 try:
-	RDIO_tg_config = config.get('Section1','RDIO_tg')
+	RDIO_tg_config = config.get('System','RDIO_tg')
 except:
 	RDIO_tg_config = ''
 try:
-	OpenMHz_APIkey_config = config.get('Section1','openmhz_api_key')
+	OpenMHz_APIkey_config = config.get('System','openmhz_api_key')
 except:
 	OpenMHz_APIkey_config = ''
 try:
-	OpenMHz_ShortName_config = config.get('Section1','openmhz_short_name')
+	OpenMHz_ShortName_config = config.get('System','openmhz_short_name')
 except:
 	OpenMHz_ShortName_config = ''
 try:
-	OpenMHz_tgid_config = config.get('Section1','openmhz_tgid')
+	OpenMHz_tgid_config = config.get('System','openmhz_tgid')
 except:
 	OpenMHz_tgid_config = ''
 try:
-	audio_file_folder_config = config.get('Section1','audio_file_folder')
+	audio_save_folder_config = config.get('System','audio_save_folder')
 except:
-	audio_file_folder_config = './audiosave/'
-
-try:
-	audio_out_dev_index = config.getint('Section1','audio_out_dev_index')
-except:
-	audio_out_dev_index = 0
+	audio_save_folder_config = './audiosave/'
 
 # Read Playback_Audio section
 playback_buttons = []
@@ -266,10 +270,39 @@ if root != '':
 	in_channel.set(in_channel_config)
 	barvar = IntVar()
 	barvar.set(10)
-	input_device.set(inv_input_device_indices.get(audio_dev_index,input_devices[0]))
-	original_name = inv_output_device_indices.get(audio_out_dev_index, output_devices[0].replace(" (Default)", "") if output_devices else "")
-	display_name = original_name + " (Default)" if original_name == default_output_name else original_name
-	output_device.set(display_name)
+	
+	# Try to set input device by name, warn if not found
+	input_device_found = False
+	if audio_input_device_name in input_devices:
+		input_device.set(audio_input_device_name)
+		input_device_found = True
+	elif input_devices:
+		input_device.set(input_devices[0])
+		if audio_input_device_name:
+			messagebox.showwarning("Audio Device Not Found", 
+				f"The configured audio input device '{audio_input_device_name}' was not found.\n"
+				f"Using '{input_devices[0]}' instead.\nPlease select the correct device and save settings.")
+	
+	# Try to set output device by name, warn if not found
+	output_device_found = False
+	output_device_name_to_set = None
+	if audio_output_device_name:
+		# Check if device name exists (with or without (Default) suffix)
+		for dev in output_devices:
+			if dev.replace(" (Default)", "") == audio_output_device_name:
+				output_device.set(dev)
+				output_device_found = True
+				output_device_name_to_set = dev
+				break
+	
+	if not output_device_found:
+		if output_devices:
+			output_device.set(output_devices[0])
+			output_device_name_to_set = output_devices[0]
+			if audio_output_device_name:
+				messagebox.showwarning("Audio Device Not Found", 
+					f"The configured audio output device '{audio_output_device_name}' was not found.\n"
+					f"Using '{output_devices[0].replace(' (Default)', '')}' instead.\nPlease select the correct device and save settings.")
 
 RATE = 22050
 chunk = 2205
@@ -287,9 +320,14 @@ def start_audio_stream():
 			if in_channel_config == 'left' or in_channel_config == 'right':
 				CHANNELS = 2
 		if root != '':
-			index = input_device_indices[input_device.get()]
+			device_name = input_device.get()
+			index = input_device_indices.get(device_name, 0)
 		else:
-			index = audio_dev_index
+			device_name = audio_input_device_name if audio_input_device_name else input_devices[0] if input_devices else None
+			if device_name and device_name in input_device_indices:
+				index = input_device_indices[device_name]
+			else:
+				index = audio_dev_index
 		recordstream = pr.open(format = FORMAT,
 					channels = CHANNELS,
 					rate = RATE,
@@ -473,12 +511,12 @@ def cleanup_audio_files(fname):
 		saveit = saveaudio_config
 	if saveit != 0:
 		try:
-			os.makedirs(audio_file_folder_config)
+			os.makedirs(audio_save_folder_config)
 		except OSError as e:
 			if e.errno != errno.EEXIST:
 				raise
 		logger.debug("Moving mp3 file for archiving")
-		copyfile(fname.replace('.wav','.mp3'),audio_file_folder_config+'/'+fname.replace('.wav','.mp3'))
+		copyfile(fname.replace('.wav','.mp3'),audio_save_folder_config+'/'+fname.replace('.wav','.mp3'))
 	time.sleep(10)  #this is hacky - wait to make sure the upload threads have had time to grab the file before deleting it
 	logger.debug("Removing temporary audio files")
 	os.remove(fname.replace('.wav','.mp3'))
@@ -496,7 +534,12 @@ def play_wav_file(filename):
 			original_name = output_device.get().replace(" (Default)", "")
 			out_index = output_device_indices.get(original_name, 0)
 		else:
-			out_index = audio_out_dev_index
+			device_name = audio_output_device_name if audio_output_device_name else None
+			if device_name and device_name in output_device_indices:
+				out_index = output_device_indices[device_name]
+			else:
+				# Fallback to first available output device
+				out_index = output_device_indices.get(list(output_device_indices.keys())[0], 0) if output_device_indices else 0
 		stream = p_out.open(format=p_out.get_format_from_width(wf.getsampwidth()),
 							channels=wf.getnchannels(),
 							rate=wf.getframerate(),
@@ -657,28 +700,29 @@ def saveconfigdata():
 	if root != '':
 		config = ConfigParser()
 		config.read('config.cfg')
-		if 'Section1' not in config.sections():
-			config.add_section('Section1')
+		if 'System' not in config.sections():
+			config.add_section('System')
 		cfgfile = open('config.cfg','w')
-		config.set('Section1','audio_dev_index',str(input_device_indices[input_device.get()]))
+		config.set('System','audio_input_device_name',input_device.get())
 		original_name = output_device.get().replace(" (Default)", "")
-		config.set('Section1','audio_out_dev_index',str(output_device_indices[original_name]))
-		config.set('Section1','record_threshold',str(record_threshold.get()))
-		config.set('Section1','vox_silence_time',str(vox_silence_time))
-		config.set('Section1','in_channel',in_channel.get())
-		config.set('Section1','BCFY_SystemId',BCFY_SystemId.get())
-		config.set('Section1','RadioFreq',RadioFreq.get())
-		config.set('Section1','BCFY_APIkey',BCFY_APIkey.get())
-		config.set('Section1','BCFY_SlotId',BCFY_SlotId.get())
-		config.set('Section1','saveaudio',str(saveaudio.get()))
-		config.set('Section1','vox_silence_time',str(vox_silence_time))
-		config.set('Section1','RDIO_APIkey',RDIO_APIkey.get())
-		config.set('Section1','RDIO_APIurl',RDIO_APIurl.get())
-		config.set('Section1','RDIO_system',RDIO_system.get())
-		config.set('Section1','RDIO_tg',RDIO_tg.get())
-		config.set('Section1','openmhz_api_key',OpenMHz_APIkey.get())
-		config.set('Section1','openmhz_short_name',OpenMHz_ShortName.get())
-		config.set('Section1','openmhz_tgid',OpenMHz_tgid.get())
+		config.set('System','audio_output_device_name',original_name)
+		config.set('System','record_threshold',str(record_threshold.get()))
+		config.set('System','vox_silence_time',str(vox_silence_time))
+		config.set('System','in_channel',in_channel.get())
+		config.set('System','BCFY_SystemId',BCFY_SystemId.get())
+		config.set('System','RadioFreq',RadioFreq.get())
+		config.set('System','BCFY_APIkey',BCFY_APIkey.get())
+		config.set('System','BCFY_SlotId',BCFY_SlotId.get())
+		config.set('System','saveaudio',str(saveaudio.get()))
+		config.set('System','vox_silence_time',str(vox_silence_time))
+		config.set('System','RDIO_APIkey',RDIO_APIkey.get())
+		config.set('System','RDIO_APIurl',RDIO_APIurl.get())
+		config.set('System','RDIO_system',RDIO_system.get())
+		config.set('System','RDIO_tg',RDIO_tg.get())
+		config.set('System','openmhz_api_key',OpenMHz_APIkey.get())
+		config.set('System','openmhz_short_name',OpenMHz_ShortName.get())
+		config.set('System','openmhz_tgid',OpenMHz_tgid.get())
+		config.set('System','audio_save_folder',audio_save_folder_config)
 		config.write(cfgfile)
 		cfgfile.close()
 		root.destroy()
